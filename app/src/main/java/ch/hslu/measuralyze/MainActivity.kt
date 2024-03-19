@@ -37,7 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat.getSystemService
-import ch.hslu.measuralyze.screens.MeasureScreen
+import ch.hslu.measuralyze.screen.MeasureScreen
 import ch.hslu.measuralyze.ui.theme.MeasuralyzeTheme
 
 class MainActivity : ComponentActivity() {
@@ -136,7 +136,6 @@ class MainActivity : ComponentActivity() {
         val isWifiScanningEnabled = wifiManager.isScanAlwaysAvailable
         bluetoothScanningSettingEnabled = isBluetoothScanningSettingEnabled()
 
-        // Now you have the information, you can display it or use it as needed
         // For simplicity, I'll just log the information here
         Log.d("DeviceInfo", "ECI: $eci, TAC: $tac, Power: $power")
         Log.d("DeviceInfo", "Wifi Scan Results: $wifiScanResults")

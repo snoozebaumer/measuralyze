@@ -1,4 +1,4 @@
-package ch.hslu.measuralyze.components.measure
+package ch.hslu.measuralyze.component.measure
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
