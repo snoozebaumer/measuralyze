@@ -1,9 +1,9 @@
 package ch.hslu.measuralyze.service
 
-import android.annotation.SuppressLint
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.RemoteException
+import android.util.Log
 import ch.hslu.measuralyze.model.WifiInfo
 import java.security.InvalidParameterException
 
@@ -25,24 +25,25 @@ class WifiScanService private constructor(private val wifiManager: WifiManager) 
 
 
     @Throws(RemoteException::class)
-    @SuppressLint("MissingPermission")
     fun fetchCurrentValues(onWifInfoFetched: (List<WifiInfo>) -> Unit) {
-        val wifiInfoList: List<WifiInfo> = wifiManager.scanResults.map { scanResult ->
-            WifiInfo().apply {
-                ssid = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    scanResult.wifiSsid.toString()
-                } else {
-                    scanResult.SSID
+        try {
+            val wifiInfoList: List<WifiInfo> = wifiManager.scanResults.map { scanResult ->
+                WifiInfo().apply {
+                    ssid = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        scanResult.wifiSsid.toString()
+                    } else {
+                        scanResult.SSID
+                    }
+                    bssid = scanResult.BSSID
+                    rssi = scanResult.level
+                    frequency = scanResult.frequency
                 }
-                bssid = scanResult.BSSID
-                rssi = scanResult.level
-                frequency = scanResult.frequency
             }
+            onWifInfoFetched(wifiInfoList)
+        } catch (e: SecurityException) {
+            Log.e("WifiScanService", "Permission to access wifi information denied")
+            onWifInfoFetched(ArrayList())
         }
-        onWifInfoFetched(wifiInfoList)
     }
-
-
-
 
 }

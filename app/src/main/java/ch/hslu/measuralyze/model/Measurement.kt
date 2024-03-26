@@ -5,8 +5,9 @@ data class Measurement constructor(var timeStamp: java.time.LocalDateTime, var l
     var gpsPosition: GpsPosition = GpsPosition(latitude, longitude, accuracy)
     var cellTowerInfo: List<CellTowerInfo> = mutableListOf()
     var wifiInfo: List<WifiInfo> = mutableListOf()
+    var systemSettings: SystemSettings = SystemSettings()
 
     override fun toString(): String {
-        return "Measurement(cellTowerInfo=$cellTowerInfo, wifiInfo=$wifiInfo)"
+        return "Measurement(timestamp=${timeStamp} gpsPosition=$gpsPosition, cellTowerInfo=$cellTowerInfo, wifiInfo=$wifiInfo, systemSettings=$systemSettings)"
     }
 }

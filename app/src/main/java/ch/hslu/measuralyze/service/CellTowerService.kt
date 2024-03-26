@@ -1,6 +1,5 @@
 package ch.hslu.measuralyze.service
 
-import android.annotation.SuppressLint
 import android.telephony.CellInfo
 import android.telephony.CellInfoGsm
 import android.telephony.CellInfoLte
@@ -26,9 +25,16 @@ class CellTowerService private constructor(private val telephonyManager: Telepho
         }
     }
 
-    @SuppressLint("MissingPermission")
+
     fun fetchCurrentValues(onCellTowerValuesFetched: (ArrayList<CellTowerInfo>) -> Unit) {
-        val cellInfoList: List<CellInfo> = telephonyManager.allCellInfo
+        val cellInfoList: List<CellInfo>
+        try {
+            cellInfoList = telephonyManager.allCellInfo
+        } catch (e: SecurityException) {
+            Log.e("CellTowerService", "Permission to access cell tower information denied")
+            onCellTowerValuesFetched(ArrayList())
+            return
+        }
         val cellTowerInfoList: ArrayList<CellTowerInfo> = ArrayList()
 
         for (cellInfo: CellInfo in cellInfoList) {
@@ -42,8 +48,10 @@ class CellTowerService private constructor(private val telephonyManager: Telepho
                     val cellIdentityWcdma = cellInfo.cellIdentity
                     cellTowerInfo.mcc = cellIdentityWcdma.mccString ?: ""
                     cellTowerInfo.mnc = cellIdentityWcdma.mncString ?: ""
-                    cellTowerInfo.lac = if (cellIdentityWcdma.lac == Int.MAX_VALUE)  0 else cellIdentityWcdma.lac
-                    cellTowerInfo.cid =  if (cellIdentityWcdma.cid == Int.MAX_VALUE)  0 else cellIdentityWcdma.cid
+                    cellTowerInfo.lac =
+                        if (cellIdentityWcdma.lac == Int.MAX_VALUE) 0 else cellIdentityWcdma.lac
+                    cellTowerInfo.cid =
+                        if (cellIdentityWcdma.cid == Int.MAX_VALUE) 0 else cellIdentityWcdma.cid
                     val cellSignalStrengthWcdma = cellInfo.cellSignalStrength
                     cellTowerInfo.rsrp = cellSignalStrengthWcdma.dbm
                     cellTowerInfo.rsrq = cellSignalStrengthWcdma.asuLevel
@@ -53,8 +61,10 @@ class CellTowerService private constructor(private val telephonyManager: Telepho
                     val cellIdentityLte = cellInfo.cellIdentity
                     cellTowerInfo.mcc = cellIdentityLte.mccString ?: ""
                     cellTowerInfo.mnc = cellIdentityLte.mncString ?: ""
-                    cellTowerInfo.lac = if (cellIdentityLte.tac == Int.MAX_VALUE)  0 else cellIdentityLte.tac
-                    cellTowerInfo.cid = if (cellIdentityLte.ci == Int.MAX_VALUE)  0 else cellIdentityLte.ci
+                    cellTowerInfo.lac =
+                        if (cellIdentityLte.tac == Int.MAX_VALUE) 0 else cellIdentityLte.tac
+                    cellTowerInfo.cid =
+                        if (cellIdentityLte.ci == Int.MAX_VALUE) 0 else cellIdentityLte.ci
                     val cellSignalStrengthLte = cellInfo.cellSignalStrength
                     cellTowerInfo.rsrp = cellSignalStrengthLte.rsrp
                     cellTowerInfo.rsrq = cellSignalStrengthLte.rsrq
@@ -64,12 +74,15 @@ class CellTowerService private constructor(private val telephonyManager: Telepho
                     val cellIdentityGsm = cellInfo.cellIdentity
                     cellTowerInfo.mcc = cellIdentityGsm.mccString ?: ""
                     cellTowerInfo.mnc = cellIdentityGsm.mncString ?: ""
-                    cellTowerInfo.lac = if (cellIdentityGsm.lac == Int.MAX_VALUE)  0 else cellIdentityGsm.lac
-                    cellTowerInfo.cid = if (cellIdentityGsm.cid == Int.MAX_VALUE)  0 else cellIdentityGsm.cid
+                    cellTowerInfo.lac =
+                        if (cellIdentityGsm.lac == Int.MAX_VALUE) 0 else cellIdentityGsm.lac
+                    cellTowerInfo.cid =
+                        if (cellIdentityGsm.cid == Int.MAX_VALUE) 0 else cellIdentityGsm.cid
                     val cellSignalStrengthGsm = cellInfo.cellSignalStrength
                     cellTowerInfo.rsrp = cellSignalStrengthGsm.dbm
                     cellTowerInfo.rsrq = cellSignalStrengthGsm.asuLevel
                 }
+
                 else -> {
                     Log.e("CellTowerService", "Unsupported CellInfo type")
                     continue

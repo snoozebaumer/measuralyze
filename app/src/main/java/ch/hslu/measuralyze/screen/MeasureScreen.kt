@@ -1,8 +1,8 @@
 package ch.hslu.measuralyze.screen
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.net.wifi.WifiManager
 import android.os.Looper
 import android.telephony.TelephonyManager
@@ -34,10 +34,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.getSystemService
 import ch.hslu.measuralyze.component.measure.MeasureButton
-import ch.hslu.measuralyze.model.CellTowerInfo
 import ch.hslu.measuralyze.model.GpsPosition
 import ch.hslu.measuralyze.model.Measurement
 import ch.hslu.measuralyze.service.CellTowerService
+import ch.hslu.measuralyze.service.SystemSettingsService
 import ch.hslu.measuralyze.service.WifiScanService
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.Granularity
@@ -53,7 +53,6 @@ fun MeasureScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     var buttonText by remember { mutableStateOf("Start measurement") }
     var buttonColor by remember { mutableStateOf(Color.LightGray) }
-    var cellTowers by remember { mutableStateOf(ArrayList<CellTowerInfo>()) }
     val measurementList = remember { mutableStateListOf<Measurement>() }
 
     val fusedLocationClient: FusedLocationProviderClient =
@@ -70,6 +69,8 @@ fun MeasureScreen(modifier: Modifier = Modifier) {
             WifiManager::class.java
         ) as WifiManager
     )
+    val systemSettingsService: SystemSettingsService =
+        SystemSettingsService.getSystemSettingsService(context.contentResolver, getSystemService(context, TelephonyManager::class.java) as TelephonyManager)
 
     val requestPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
@@ -94,18 +95,28 @@ fun MeasureScreen(modifier: Modifier = Modifier) {
                 buttonColor = Color(0xFFADD8E6)
 
                 if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                    fetchGPSPosition(fusedLocationClient) { position ->
-                        val measurement = Measurement(java.time.LocalDateTime.now(), position.latitude, position.longitude, position.accuracy)
-                        buttonText = "Start measurement"
-                        buttonColor = Color.LightGray
+                    systemSettingsService.fetchSystemSettings { systemSettings ->
+                        fetchGPSPosition(
+                            fusedLocationClient,
+                            systemSettings.isAirplaneModeEnabled
+                        ) { position ->
+                            val measurement = Measurement(
+                                java.time.LocalDateTime.now(),
+                                position.latitude,
+                                position.longitude,
+                                position.accuracy
+                            )
+                            measurement.systemSettings = systemSettings
+                            buttonText = "Start measurement"
+                            buttonColor = Color.LightGray
 
-                        cellTowerService.fetchCurrentValues() { cellTowerInfo ->
-                            cellTowers = cellTowerInfo
-                            measurement.cellTowerInfo = cellTowerInfo
-                        }
-                        wifiScanService.fetchCurrentValues { wifiInfo ->
-                            measurement.wifiInfo = wifiInfo
-                            measurementList.add(measurement)
+                            cellTowerService.fetchCurrentValues { cellTowerInfo ->
+                                measurement.cellTowerInfo = cellTowerInfo
+                            }
+                            wifiScanService.fetchCurrentValues { wifiInfo ->
+                                measurement.wifiInfo = wifiInfo
+                                measurementList.add(measurement)
+                            }
                         }
                     }
                 } else {
@@ -116,54 +127,67 @@ fun MeasureScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        Column(horizontalAlignment = Alignment.Start,
-            modifier = Modifier.padding(start = 16.dp)
+        Column(
+            horizontalAlignment = Alignment.Start,
+            modifier = Modifier
+                .padding(start = 16.dp)
                 .verticalScroll(rememberScrollState())
                 .horizontalScroll(
-                    rememberScrollState())
-                .weight(weight = 1f, fill = false)) {
+                    rememberScrollState()
+                )
+                .weight(weight = 1f, fill = false)
+        ) {
             if (measurementList.isNotEmpty()) {
                 //TODO: outsource to different view where measurementList is passed in, with Table: https://github.com/sunny-chung/composable-table
-                if (measurementList[0].gpsPosition.longitude != 0.toDouble()) {
-                    val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-                    Text(
-                        text = "GPS Position: ${measurementList[0].gpsPosition}\nDate/Time: ${
-                            measurementList[0].timeStamp.format(
-                                dateFormat
-                            )
-                        }",
-                        modifier = Modifier.padding(top = 16.dp),
-                    )
-                }
+                for (measurement in measurementList) {
+                    if (measurement.gpsPosition.longitude != 0.toDouble()) {
+                        val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                        Text(
+                            text = "GPS Position: ${measurement.gpsPosition}\nDate/Time: ${
+                                measurement.timeStamp.format(
+                                    dateFormat
+                                )
+                            }",
+                            modifier = Modifier.padding(top = 16.dp),
+                        )
+                    }
 
-                for (cellTower in measurementList[0].cellTowerInfo) {
-                Text(
-                    text = "ECI: ${cellTower.cid}\nLAC: ${cellTower.lac}\nSignal: ${cellTower.rsrp}",
-                    modifier = Modifier.padding(top = 16.dp),
-                )
-            }
+                    for (cellTower in measurement.cellTowerInfo) {
+                        Text(
+                            text = "ECI: ${cellTower.cid}\nLAC: ${cellTower.lac}\nSignal: ${cellTower.rsrp}",
+                            modifier = Modifier.padding(top = 16.dp),
+                        )
+                    }
 
-                for (wifiInfo in measurementList[0].wifiInfo) {
+                    for (wifiInfo in measurement.wifiInfo) {
+                        Text(
+                            text = "SSID: ${wifiInfo.ssid}\nBSSID: ${wifiInfo.bssid}\nSignal strength: ${wifiInfo.rssi}",
+                            modifier = Modifier.padding(top = 16.dp)
+                        )
+                    }
                     Text(
-                        text = "SSID: ${wifiInfo.ssid}\nBSSID: ${wifiInfo.bssid}\nSignal strength: ${wifiInfo.rssi}",
+                        text = "System settings: ${measurement.systemSettings}",
                         modifier = Modifier.padding(top = 16.dp)
                     )
                 }
-
             }
         }
     }
 }
 
-@SuppressLint("MissingPermission")
 fun fetchGPSPosition(
     fusedLocationClient: FusedLocationProviderClient,
+    isAirplaneModeEnabled: Boolean,
     onPositionFetched: (GpsPosition) -> Unit
 ) {
-    val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 100).apply {
-        setGranularity(Granularity.GRANULARITY_PERMISSION_LEVEL)
-        setWaitForAccurateLocation(true)
-    }.build()
+    val priority: Int =
+        if (isAirplaneModeEnabled) Priority.PRIORITY_BALANCED_POWER_ACCURACY else Priority.PRIORITY_HIGH_ACCURACY
+
+    val locationRequest =
+        LocationRequest.Builder(priority, 100).apply {
+            setGranularity(Granularity.GRANULARITY_PERMISSION_LEVEL)
+            setWaitForAccurateLocation(true)
+        }.build()
 
     val locationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
@@ -180,11 +204,15 @@ fun fetchGPSPosition(
         }
     }
 
-    fusedLocationClient.requestLocationUpdates(
-        locationRequest,
-        locationCallback,
-        Looper.getMainLooper()
-    )
+    try {
+        fusedLocationClient.requestLocationUpdates(
+            locationRequest,
+            locationCallback,
+            Looper.getMainLooper()
+        )
+    } catch (e: SecurityException) {
+        e.printStackTrace()
+    }
 }
 
 @Preview(showBackground = true)
