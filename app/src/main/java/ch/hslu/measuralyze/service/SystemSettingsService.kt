@@ -8,26 +8,10 @@ import android.os.Looper
 import android.provider.Settings
 import android.telephony.TelephonyManager
 import ch.hslu.measuralyze.model.SystemSettings
-import java.security.InvalidParameterException
 
-class SystemSettingsService private constructor(private val contentResolver: ContentResolver, private val telephonyManager: TelephonyManager) {
+class SystemSettingsService(private val contentResolver: ContentResolver, private val telephonyManager: TelephonyManager) {
     private var systemSettings: SystemSettings? = null
     private val observers: MutableList<ContentObserver> = mutableListOf()
-
-    companion object {
-        private var systemSettingsService: SystemSettingsService? = null
-
-        @Throws(InvalidParameterException::class)
-        fun getSystemSettingsService(contentResolver: ContentResolver? = null, telephonyManager: TelephonyManager? = null): SystemSettingsService {
-            if (systemSettingsService == null) {
-                if (contentResolver == null || telephonyManager == null) {
-                    throw InvalidParameterException("systemSettingsService doesn't exist and contentResolver or telephonyManager was not provided")
-                }
-                systemSettingsService = SystemSettingsService(contentResolver, telephonyManager)
-            }
-            return systemSettingsService as SystemSettingsService
-        }
-    }
 
     init {
         startListeningForChangesForCachedSettings()

@@ -2,29 +2,10 @@ package ch.hslu.measuralyze.service
 
 import android.net.wifi.WifiManager
 import android.os.Build
-import android.os.RemoteException
 import android.util.Log
 import ch.hslu.measuralyze.model.WifiInfo
-import java.security.InvalidParameterException
 
-class WifiScanService private constructor(private val wifiManager: WifiManager) {
-    companion object {
-        private var wifiScanService: WifiScanService? = null
-
-        @Throws(InvalidParameterException::class)
-        fun getWifiScanService(wifiManager: WifiManager? = null): WifiScanService {
-            if (wifiScanService === null) {
-                if (wifiManager === null) {
-                    throw InvalidParameterException("cellTowerService doesn't exist and telephonyManager was not provided")
-                }
-                wifiScanService = WifiScanService(wifiManager)
-            }
-            return wifiScanService as WifiScanService
-        }
-    }
-
-
-    @Throws(RemoteException::class)
+class WifiScanService(private val wifiManager: WifiManager) {
     fun fetchCurrentValues(onWifInfoFetched: (List<WifiInfo>) -> Unit) {
         try {
             val wifiInfoList: List<WifiInfo> = wifiManager.scanResults.map { scanResult ->
@@ -32,6 +13,8 @@ class WifiScanService private constructor(private val wifiManager: WifiManager) 
                     ssid = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         scanResult.wifiSsid.toString()
                     } else {
+                        // supressing deprecation warning because this is the only way to get the SSID on older versions and we explicitly check version
+                        @Suppress("DEPRECATION")
                         scanResult.SSID
                     }
                     bssid = scanResult.BSSID

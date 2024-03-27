@@ -1,7 +1,6 @@
 package ch.hslu.measuralyze
 
 import android.os.Bundle
-import android.telephony.TelephonyManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,16 +23,13 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import ch.hslu.measuralyze.screen.MeasureScreen
-import ch.hslu.measuralyze.service.SystemSettingsService
 import ch.hslu.measuralyze.ui.theme.MeasuralyzeTheme
 
 class MainActivity : ComponentActivity() {
-    private lateinit var systemSettingsService: SystemSettingsService
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        systemSettingsService = SystemSettingsService.getSystemSettingsService(this.contentResolver, getSystemService(TelephonyManager::class.java) as TelephonyManager)
         setContent {
             MeasuralyzeTheme(darkTheme = false) {
                 val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
@@ -76,16 +72,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        systemSettingsService.stopListeningForChangesForCachedSettings()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        systemSettingsService.startListeningForChangesForCachedSettings()
     }
 }
 

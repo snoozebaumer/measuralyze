@@ -2,10 +2,6 @@ package ch.hslu.measuralyze.screen
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.location.LocationManager
-import android.net.wifi.WifiManager
-import android.os.Looper
-import android.telephony.TelephonyManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,20 +28,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat.getSystemService
 import ch.hslu.measuralyze.component.measure.MeasureButton
-import ch.hslu.measuralyze.model.GpsPosition
 import ch.hslu.measuralyze.model.Measurement
-import ch.hslu.measuralyze.service.CellTowerService
-import ch.hslu.measuralyze.service.SystemSettingsService
-import ch.hslu.measuralyze.service.WifiScanService
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.Granularity
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationResult
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
+import ch.hslu.measuralyze.service.MeasureService
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -55,22 +40,7 @@ fun MeasureScreen(modifier: Modifier = Modifier) {
     var buttonColor by remember { mutableStateOf(Color.LightGray) }
     val measurementList = remember { mutableStateListOf<Measurement>() }
 
-    val fusedLocationClient: FusedLocationProviderClient =
-        LocationServices.getFusedLocationProviderClient(context)
-    val cellTowerService: CellTowerService = CellTowerService.getCellTowerService(
-        getSystemService(
-            context,
-            TelephonyManager::class.java
-        ) as TelephonyManager
-    )
-    val wifiScanService: WifiScanService = WifiScanService.getWifiScanService(
-        getSystemService(
-            context,
-            WifiManager::class.java
-        ) as WifiManager
-    )
-    val systemSettingsService: SystemSettingsService =
-        SystemSettingsService.getSystemSettingsService(context.contentResolver, getSystemService(context, TelephonyManager::class.java) as TelephonyManager)
+    val measureService = MeasureService(context)
 
     val requestPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
@@ -95,33 +65,14 @@ fun MeasureScreen(modifier: Modifier = Modifier) {
                 buttonColor = Color(0xFFADD8E6)
 
                 if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                    systemSettingsService.fetchSystemSettings { systemSettings ->
-                        fetchGPSPosition(
-                            fusedLocationClient,
-                            systemSettings.isAirplaneModeEnabled
-                        ) { position ->
-                            val measurement = Measurement(
-                                java.time.LocalDateTime.now(),
-                                position.latitude,
-                                position.longitude,
-                                position.accuracy
-                            )
-                            measurement.systemSettings = systemSettings
-                            buttonText = "Start measurement"
-                            buttonColor = Color.LightGray
-
-                            cellTowerService.fetchCurrentValues { cellTowerInfo ->
-                                measurement.cellTowerInfo = cellTowerInfo
-                            }
-                            wifiScanService.fetchCurrentValues { wifiInfo ->
-                                measurement.wifiInfo = wifiInfo
-                                measurementList.add(measurement)
-                            }
-                        }
+                    measureService.fetchMeasurement { measurement ->
+                        measurementList.add(measurement)
+                        buttonText = "Start measurement"
+                        buttonColor = Color.LightGray
                     }
                 } else {
                     requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                    buttonText = "Permission failure, press to try again"
+                    buttonText = "Permission failure"
                     buttonColor = Color.LightGray
                 }
             }
@@ -172,46 +123,6 @@ fun MeasureScreen(modifier: Modifier = Modifier) {
                 }
             }
         }
-    }
-}
-
-fun fetchGPSPosition(
-    fusedLocationClient: FusedLocationProviderClient,
-    isAirplaneModeEnabled: Boolean,
-    onPositionFetched: (GpsPosition) -> Unit
-) {
-    val priority: Int =
-        if (isAirplaneModeEnabled) Priority.PRIORITY_BALANCED_POWER_ACCURACY else Priority.PRIORITY_HIGH_ACCURACY
-
-    val locationRequest =
-        LocationRequest.Builder(priority, 100).apply {
-            setGranularity(Granularity.GRANULARITY_PERMISSION_LEVEL)
-            setWaitForAccurateLocation(true)
-        }.build()
-
-    val locationCallback = object : LocationCallback() {
-        override fun onLocationResult(locationResult: LocationResult) {
-            for (location in locationResult.locations) {
-                val position = GpsPosition(
-                    location.latitude,
-                    location.longitude,
-                    location.accuracy
-                )
-                onPositionFetched(position)
-                // Stop receiving updates after position is fetched
-                fusedLocationClient.removeLocationUpdates(this)
-            }
-        }
-    }
-
-    try {
-        fusedLocationClient.requestLocationUpdates(
-            locationRequest,
-            locationCallback,
-            Looper.getMainLooper()
-        )
-    } catch (e: SecurityException) {
-        e.printStackTrace()
     }
 }
 

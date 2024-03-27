@@ -7,25 +7,8 @@ import android.telephony.CellInfoWcdma
 import android.telephony.TelephonyManager
 import android.util.Log
 import ch.hslu.measuralyze.model.CellTowerInfo
-import java.security.InvalidParameterException
 
-class CellTowerService private constructor(private val telephonyManager: TelephonyManager) {
-    companion object {
-        private var cellTowerService: CellTowerService? = null
-
-        @Throws(InvalidParameterException::class)
-        fun getCellTowerService(telephonyManager: TelephonyManager? = null): CellTowerService {
-            if (cellTowerService === null) {
-                if (telephonyManager === null) {
-                    throw InvalidParameterException("cellTowerService doesn't exist and telephonyManager was not provided")
-                }
-                cellTowerService = CellTowerService(telephonyManager)
-            }
-            return cellTowerService as CellTowerService
-        }
-    }
-
-
+class CellTowerService(private val telephonyManager: TelephonyManager) {
     fun fetchCurrentValues(onCellTowerValuesFetched: (ArrayList<CellTowerInfo>) -> Unit) {
         val cellInfoList: List<CellInfo>
         try {
