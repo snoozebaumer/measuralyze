@@ -15,7 +15,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -25,20 +24,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ch.hslu.measuralyze.SharedViewModel
 import ch.hslu.measuralyze.component.measure.MeasureButton
-import ch.hslu.measuralyze.model.Measurement
 import ch.hslu.measuralyze.service.MeasureService
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun MeasureScreen(modifier: Modifier = Modifier) {
+fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewModel) {
     val context = LocalContext.current
     var buttonText by remember { mutableStateOf("Start measurement") }
     var buttonColor by remember { mutableStateOf(Color.LightGray) }
-    val measurementList = remember { mutableStateListOf<Measurement>() }
+    val measurementList = sharedViewModel.measurementData.value
 
     val measureService = MeasureService(context)
 
@@ -66,7 +64,7 @@ fun MeasureScreen(modifier: Modifier = Modifier) {
 
                 if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                     measureService.fetchMeasurement { measurement ->
-                        measurementList.add(measurement)
+                        sharedViewModel.addMeasurement(measurement)
                         buttonText = "Start measurement"
                         buttonColor = Color.LightGray
                     }
@@ -81,7 +79,6 @@ fun MeasureScreen(modifier: Modifier = Modifier) {
         Column(
             horizontalAlignment = Alignment.Start,
             modifier = Modifier
-                .padding(start = 16.dp)
                 .verticalScroll(rememberScrollState())
                 .horizontalScroll(
                     rememberScrollState()
@@ -124,10 +121,4 @@ fun MeasureScreen(modifier: Modifier = Modifier) {
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun MeasureScreenPreview() {
-    MeasureScreen()
 }
