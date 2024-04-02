@@ -36,6 +36,12 @@ fun ConfigurationScreen(modifier: Modifier = Modifier, sharedViewModel: SharedVi
 
     fun onStageAdded(stage: String) {
         sharedViewModel.addStage(stage)
+        sharedViewModel.configFormDirty = true
+    }
+
+    fun onStageDeleted(index: Int) {
+        sharedViewModel.removeStage(index)
+        sharedViewModel.configFormDirty = true
     }
 
     Column(
@@ -45,7 +51,7 @@ fun ConfigurationScreen(modifier: Modifier = Modifier, sharedViewModel: SharedVi
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Stages(stages = sharedViewModel.stagesFormData, onStageAdded = (::onStageAdded)) {
-                sharedViewModel.removeStage(it)
+                onStageDeleted(it)
             }
         }
     }
@@ -66,8 +72,10 @@ fun Stages(
                 modifier = Modifier.padding(vertical = 8.dp)
             ) {
                 Text(stage, modifier = Modifier.weight(1f))
-                IconButton(onClick = { onStageDeleted(index) }) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete Stage")
+                if (stages.value.lastIndex > 0) {
+                    IconButton(onClick = { onStageDeleted(index) }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete Stage")
+                    }
                 }
             }
         }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -17,8 +18,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,9 +42,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             val sharedViewModel: SharedViewModel = remember { SharedViewModel() }
             var settingsActive by remember { mutableStateOf(false) }
+            val openDialog = remember { mutableStateOf(false) }
 
             MeasuralyzeTheme(darkTheme = false) {
-                val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
+                val scrollBehavior =
+                    TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
                 Scaffold(
                     modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -49,13 +54,17 @@ class MainActivity : ComponentActivity() {
                     topBar = {
                         CenterAlignedTopAppBar(
                             navigationIcon = {
-                                if (settingsActive) {IconButton(onClick = { settingsActive = false }) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Back to measure screen"
-                                    )
+                                if (settingsActive) {
+                                    IconButton(onClick = { if (sharedViewModel.hasUnsavedConfigChanges()) openDialog.value = true else settingsActive = false }) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                            contentDescription = "Back to measure screen"
+                                        )
+                                    }
+                                } else {
+                                    null
                                 }
-                            } else {null}},
+                            },
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                                 titleContentColor = MaterialTheme.colorScheme.primary,
@@ -76,9 +85,15 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                 } else {
-                                    Text(text = "Save", modifier = Modifier.clickable { sharedViewModel.saveConfig()
-                                        settingsActive = false }.padding(end = 16.dp),
-                                        color = MaterialTheme.colorScheme.primary)
+                                    Text(
+                                        text = "Save", modifier = Modifier
+                                            .clickable {
+                                                sharedViewModel.saveConfig()
+                                                settingsActive = false
+                                            }
+                                            .padding(end = 16.dp),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                             },
                             scrollBehavior = scrollBehavior,
@@ -93,14 +108,75 @@ class MainActivity : ComponentActivity() {
                     ) {
                         // if there are going to be more than two screens in the future, it would be better to use a navigation component
                         if (settingsActive) {
-                            ConfigurationScreen(modifier = Modifier.padding(innerPadding), sharedViewModel = sharedViewModel)
+                            ConfigurationScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                sharedViewModel = sharedViewModel
+                            )
                         } else {
-                            MeasureScreen(modifier = Modifier.padding(innerPadding), sharedViewModel = sharedViewModel)
+                            MeasureScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                sharedViewModel = sharedViewModel
+                            )
                         }
                     }
+                }
+
+                if (openDialog.value) {
+                    UnsavedChangesAlert(
+                        onDismissRequest = {
+                            openDialog.value = false
+                            settingsActive = false
+                            sharedViewModel.configFormDirty = false
+                        },
+                        onConfirmation = {
+                            sharedViewModel.saveConfig()
+                            openDialog.value = false
+                            settingsActive = false
+                        },
+                        dialogTitle = "Unsaved Changes",
+                        dialogText = "Do you want to save your changes?"
+                    )
                 }
             }
         }
     }
 
+}
+
+@Composable
+fun UnsavedChangesAlert(
+    onDismissRequest: () -> Unit,
+    onConfirmation: () -> Unit,
+    dialogTitle: String,
+    dialogText: String
+) {
+    AlertDialog(
+        title = {
+            Text(text = dialogTitle)
+        },
+        text = {
+            Text(text = dialogText)
+        },
+        onDismissRequest = {
+            onDismissRequest()
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirmation()
+                }
+            ) {
+                Text("Save Changes")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    onDismissRequest()
+                }
+            ) {
+                Text("Discard")
+            }
+        }
+    )
 }

@@ -14,6 +14,8 @@ class SharedViewModel: ViewModel() {
     private val _measurementData: MutableState<List<Measurement>> = mutableStateOf(emptyList())
     private val _stagesFormData: MutableState<List<String>> = mutableStateOf(emptyList())
 
+    var configFormDirty: Boolean = false
+
     // Expose immutable State for observation
     val measurementData: State<List<Measurement>> = _measurementData
     val stagesFormData: State<List<String>> = _stagesFormData
@@ -24,6 +26,10 @@ class SharedViewModel: ViewModel() {
     }
 
     fun initConfigForm() {
+        if (configFormDirty) {
+            return
+        }
+
         if(config.stages.isNotEmpty()) {
             _stagesFormData.value = config.stages
         } else {
@@ -33,6 +39,7 @@ class SharedViewModel: ViewModel() {
 
     fun saveConfig() {
         config.stages = _stagesFormData.value
+        configFormDirty = false
     }
 
     fun addStage(stage: String) {
@@ -41,6 +48,10 @@ class SharedViewModel: ViewModel() {
 
     fun removeStage(index: Int) {
         _stagesFormData.value = _stagesFormData.value.toMutableList().apply { removeAt(index) }
+    }
+
+    fun hasUnsavedConfigChanges(): Boolean {
+        return config.stages != _stagesFormData.value
     }
 
 }
