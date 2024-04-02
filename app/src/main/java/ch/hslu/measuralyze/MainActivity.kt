@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val sharedViewModel: SharedViewModel = remember { SharedViewModel() }
+            val sharedViewModel: SharedViewModel = remember { SharedViewModel(baseContext) }
             var settingsActive by remember { mutableStateOf(false) }
             val openDialog = remember { mutableStateOf(false) }
 

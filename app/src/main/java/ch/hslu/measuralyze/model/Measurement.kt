@@ -1,12 +1,18 @@
 package ch.hslu.measuralyze.model
 
-data class Measurement constructor(var timeStamp: java.time.LocalDateTime, var latitude: Double, var longitude: Double, var accuracy: Float) {
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 
-    var gpsPosition: GpsPosition = GpsPosition(latitude, longitude, accuracy)
-    var cellTowerInfo: List<CellTowerInfo> = mutableListOf()
-    var wifiInfo: List<WifiInfo> = mutableListOf()
+@Entity(tableName = "measurements")
+data class Measurement(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    var timeStamp: java.time.LocalDateTime,
+    var gpsPosition: GpsPosition = GpsPosition(0.0,0.0,0f),
+    var cellTowerInfo: List<CellTowerInfo> = mutableListOf(),
+    var wifiInfo: List<WifiInfo> = mutableListOf(),
     var systemSettings: SystemSettings = SystemSettings()
-
+) {
     override fun toString(): String {
         return "Measurement(timestamp=${timeStamp} gpsPosition=$gpsPosition, cellTowerInfo=$cellTowerInfo, wifiInfo=$wifiInfo, systemSettings=$systemSettings)"
     }

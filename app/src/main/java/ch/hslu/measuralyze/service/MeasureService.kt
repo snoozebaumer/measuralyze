@@ -3,6 +3,7 @@ package ch.hslu.measuralyze.service
 import android.content.Context
 import android.net.wifi.WifiManager
 import android.telephony.TelephonyManager
+import ch.hslu.measuralyze.model.GpsPosition
 import ch.hslu.measuralyze.model.Measurement
 import com.google.android.gms.location.LocationServices
 import java.time.LocalDateTime
@@ -19,12 +20,10 @@ class MeasureService(context: Context) {
                 systemSettings.isAirplaneModeEnabled
             ) { position ->
                 val measurement = Measurement(
-                    LocalDateTime.now(),
-                    position.latitude,
-                    position.longitude,
-                    position.accuracy
+                    timeStamp = LocalDateTime.now(),
+                    gpsPosition = GpsPosition(position.latitude, position.longitude, position.accuracy),
+                    systemSettings = systemSettings
                 )
-                measurement.systemSettings = systemSettings
 
                 cellTowerService.fetchCurrentValues { cellTowerInfo ->
                     measurement.cellTowerInfo = cellTowerInfo
