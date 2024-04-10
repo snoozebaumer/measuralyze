@@ -3,6 +3,7 @@ package ch.hslu.measuralyze
 import android.content.Context
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -25,8 +26,13 @@ class SharedViewModel(context: Context) : ViewModel() {
 
     private val measurementDao = database.measurementDao()
     private val configurationDao = database.configurationDao()
+
     private val _measurementData: MutableState<List<Measurement>> = mutableStateOf(emptyList())
+
+    // Form data for configuration screen
     private val _stagesFormData: MutableState<List<String>> = mutableStateOf(emptyList())
+    val iterationsFormData: MutableState<Int> = mutableIntStateOf(20)
+    val measurementIntervalInMsFormData: MutableState<Int> = mutableIntStateOf(1000)
 
     var configFormDirty: Boolean = false
 
@@ -40,9 +46,15 @@ class SharedViewModel(context: Context) : ViewModel() {
             withContext(Dispatchers.IO) {
                 configurationDao.getConfiguration()?.let { configurationEntity ->
                     val stages = configurationEntity.stages
+                    val iterations = configurationEntity.iterations
+                    val measurementIntervalInMs = configurationEntity.measurementIntervalInMs
                     withContext(Dispatchers.Main) {
                         config.stages = stages
+                        config.iterations = iterations
+                        config.measurementIntervalInMs = measurementIntervalInMs
                         _stagesFormData.value = stages
+                        iterationsFormData.value = iterations
+                        measurementIntervalInMsFormData.value = measurementIntervalInMs
                     }
                 }
             }
@@ -71,10 +83,14 @@ class SharedViewModel(context: Context) : ViewModel() {
         } else {
             _stagesFormData.value = mutableListOf("Standard settings")
         }
+        iterationsFormData.value = config.iterations
+        measurementIntervalInMsFormData.value = config.measurementIntervalInMs
     }
 
     fun saveConfig() {
         config.stages = _stagesFormData.value
+        config.iterations = iterationsFormData.value
+        config.measurementIntervalInMs = measurementIntervalInMsFormData.value
         viewModelScope.launch {
             configurationDao.insertOrUpdateConfiguration(config)
         }
@@ -90,7 +106,7 @@ class SharedViewModel(context: Context) : ViewModel() {
     }
 
     fun hasUnsavedConfigChanges(): Boolean {
-        return config.stages != _stagesFormData.value
+        return config.stages != _stagesFormData.value || config.iterations != iterationsFormData.value || config.measurementIntervalInMs != measurementIntervalInMsFormData.value
     }
 
 }
