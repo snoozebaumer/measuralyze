@@ -2,6 +2,8 @@ package ch.hslu.measuralyze.screen
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -40,10 +42,50 @@ fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewMode
 
     val measureService = MeasureService(context)
 
+    fun makeMeasurementsForCurrentStage() {
+        var measurementCount = 0
+        val totalIterations = sharedViewModel.config.iterations
+        val measurementInterval = sharedViewModel.config.measurementIntervalInMs.toLong()
+
+        val stages = sharedViewModel.config.stages
+        val currentStageIndex = sharedViewModel.currentMeasureStage.intValue
+
+        fun fetchNextMeasurement() {
+            if (measurementCount < totalIterations) {
+                measureService.fetchMeasurement { measurement ->
+                    measurement.stage = stages[currentStageIndex]
+                    sharedViewModel.addMeasurement(measurement)
+                    measurementCount++
+                    buttonText = "Measuring ${measurementCount}/${totalIterations}"
+                    if (measurementCount == totalIterations) {
+                        buttonText = "Start measurement"
+                        buttonColor = Color.LightGray
+                        val nextStageIndex = (currentStageIndex + 1) % stages.size
+                        sharedViewModel.currentMeasureStage.intValue = nextStageIndex
+                    } else {
+                        // Schedule the next measurement
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            fetchNextMeasurement()
+                        }, measurementInterval)
+                    }
+                }
+            }
+        }
+
+        // Start fetching measurements
+        buttonText = "Measuring 0/${totalIterations}"
+        buttonColor = Color(0xFFADD8E6)
+        fetchNextMeasurement()
+    }
+
     val requestPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
             if (!isGranted) {
                 Toast.makeText(context, "Location permission denied", Toast.LENGTH_SHORT).show()
+                buttonText = "Permission failure"
+                buttonColor = Color.LightGray
+            } else {
+                makeMeasurementsForCurrentStage()
             }
         }
 
@@ -54,24 +96,19 @@ fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewMode
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "Measure",
+                text = "Stage: " + if (sharedViewModel.stagesFormData.value.isNotEmpty()) sharedViewModel.stagesFormData.value[sharedViewModel.currentMeasureStage.intValue] else "Measure",
                 modifier = Modifier.padding(bottom = 16.dp),
                 style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold)
             )
+
             MeasureButton(text = buttonText, color = buttonColor) {
                 buttonText = "Measuring"
                 buttonColor = Color(0xFFADD8E6)
 
                 if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                    measureService.fetchMeasurement { measurement ->
-                        sharedViewModel.addMeasurement(measurement)
-                        buttonText = "Start measurement"
-                        buttonColor = Color.LightGray
-                    }
+                    makeMeasurementsForCurrentStage()
                 } else {
                     requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                    buttonText = "Permission failure"
-                    buttonColor = Color.LightGray
                 }
             }
         }
@@ -91,7 +128,7 @@ fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewMode
                     if (measurement.gpsPosition.longitude != 0.toDouble()) {
                         val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
                         Text(
-                            text = "GPS Position: ${measurement.gpsPosition}\nDate/Time: ${
+                            text = "${measurement.id}: GPS Position: ${measurement.gpsPosition}\nDate/Time: ${
                                 measurement.timeStamp.format(
                                     dateFormat
                                 )

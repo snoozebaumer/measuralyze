@@ -39,11 +39,13 @@ class SharedViewModel(context: Context) : ViewModel() {
 
     var configFormDirty: Boolean = false
 
+    val currentMeasureStage = mutableIntStateOf(0)
+
     // Expose immutable State for observation
     val measurementData: State<List<Measurement>> = _measurementData
     val stagesFormData: State<List<String>> = _stagesFormData
     val measureLocationsFormData: State<List<MeasureLocation>> = _measureLocationsFormData
-    private val config: Configuration = Configuration()
+    val config: Configuration = Configuration()
 
     init {
         viewModelScope.launch {
@@ -66,6 +68,13 @@ class SharedViewModel(context: Context) : ViewModel() {
                 }
             }
         }
+
+        if (config.stages.isNotEmpty()) {
+            _stagesFormData.value = config.stages
+        } else {
+            _stagesFormData.value = mutableListOf("Standard settings")
+        }
+
         viewModelScope.launch {
             measurementDao.getAllMeasurements().collect { measurements ->
                 _measurementData.value = measurements
@@ -107,6 +116,12 @@ class SharedViewModel(context: Context) : ViewModel() {
         config.iterations = iterationsFormData.value
         config.measurementIntervalInMs = measurementIntervalInMsFormData.value
         config.measureLocations = _measureLocationsFormData.value
+
+        // if a user deletes a stage while they are measuring, reset current stage to 0 to make sure it is still valid, else the application will crash
+        if (currentMeasureStage.intValue >= config.stages.size) {
+            currentMeasureStage.intValue = 0
+        }
+
         viewModelScope.launch {
             configurationDao.insertOrUpdateConfiguration(config)
         }
