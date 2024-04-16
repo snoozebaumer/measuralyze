@@ -25,8 +25,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -201,7 +203,11 @@ fun StagesEditor(
                         newStage = ""
                     }
                 ),
-                modifier = Modifier.weight(1f)
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = colorScheme.surface,
+                    unfocusedContainerColor = colorScheme.surface,
+                    disabledContainerColor = colorScheme.surface
+                )
             )
 
             IconButton(onClick = {
@@ -271,6 +277,11 @@ fun LocationsEditor(
                         keyboardOptions = KeyboardOptions(
                             imeAction = ImeAction.Next
                         ),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = colorScheme.surface,
+                            unfocusedContainerColor = colorScheme.surface,
+                            disabledContainerColor = colorScheme.surface
+                        ),
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -283,6 +294,11 @@ fun LocationsEditor(
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             imeAction = ImeAction.Next
+                        ),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = colorScheme.surface,
+                            unfocusedContainerColor = colorScheme.surface,
+                            disabledContainerColor = colorScheme.surface
                         ),
                         modifier = Modifier.weight(1f)
                     )
@@ -307,6 +323,11 @@ fun LocationsEditor(
                                 newLat = ""
                                 newLong = ""
                             }
+                        ),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = colorScheme.surface,
+                            unfocusedContainerColor = colorScheme.surface,
+                            disabledContainerColor = colorScheme.surface
                         ),
                         modifier = Modifier.weight(1f)
                     )
@@ -354,6 +375,11 @@ fun LabeledIntegerField(
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = colorScheme.surface,
+                unfocusedContainerColor = colorScheme.surface,
+                disabledContainerColor = colorScheme.surface
+            ),
             modifier = Modifier.width(120.dp)
         )
     }
