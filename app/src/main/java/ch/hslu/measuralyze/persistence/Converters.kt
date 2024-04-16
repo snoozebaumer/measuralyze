@@ -3,6 +3,7 @@ package ch.hslu.measuralyze.persistence
 import androidx.room.TypeConverter
 import ch.hslu.measuralyze.model.CellTowerInfo
 import ch.hslu.measuralyze.model.GpsPosition
+import ch.hslu.measuralyze.model.MeasureLocation
 import ch.hslu.measuralyze.model.SystemSettings
 import ch.hslu.measuralyze.model.WifiInfo
 import com.google.gson.Gson
@@ -68,6 +69,19 @@ object Converters {
     @JvmStatic
     fun toCellTowerInfoList(value: String): List<CellTowerInfo> {
         val listType = object : TypeToken<List<CellTowerInfo>>() {}.type
+        return Gson().fromJson(value, listType)
+    }
+
+    @TypeConverter
+    @JvmStatic
+    fun fromMeasureLocationList(value: List<MeasureLocation>?): String {
+        return Gson().toJson(value)
+    }
+
+    @TypeConverter
+    @JvmStatic
+    fun toMeasureLocationList(value: String): List<MeasureLocation> {
+        val listType = object : TypeToken<List<MeasureLocation>>() {}.type
         return Gson().fromJson(value, listType)
     }
 

@@ -1,5 +1,7 @@
 package ch.hslu.measuralyze.screen
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,11 +11,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -37,10 +42,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import ch.hslu.measuralyze.SharedViewModel
+import ch.hslu.measuralyze.model.MeasureLocation
 
 @Composable
 fun ConfigurationScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewModel) {
+    val context = LocalContext.current
 
     sharedViewModel.initConfigForm()
 
@@ -57,7 +65,8 @@ fun ConfigurationScreen(modifier: Modifier = Modifier, sharedViewModel: SharedVi
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(top = 16.dp),
+            .padding(top = 16.dp)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
@@ -68,12 +77,37 @@ fun ConfigurationScreen(modifier: Modifier = Modifier, sharedViewModel: SharedVi
                 ),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Stages(
+                StagesEditor(
                     stages = sharedViewModel.stagesFormData,
                     onStageAdded = (::onStageAdded),
                     modifier = Modifier.padding(16.dp)
                 ) {
                     onStageDeleted(it)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Card {
+                LocationsEditor(
+                    locations = sharedViewModel.measureLocationsFormData,
+                    onLocationAdded = {
+                        sharedViewModel.addLocation(it)
+                        sharedViewModel.configFormDirty = true
+                    },
+                    openLocation = {
+                        val lat = it.latitude
+                        val long = it.longitude
+                        val uri = "geo:$lat,$long?q=$lat,$long&z=20"
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
+                        intent.resolveActivity(context.packageManager)?.let {
+                            context.startActivity(intent)
+                        }
+                    },
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    sharedViewModel.removeLocation(it)
+                    sharedViewModel.configFormDirty = true
                 }
             }
 
@@ -85,7 +119,7 @@ fun ConfigurationScreen(modifier: Modifier = Modifier, sharedViewModel: SharedVi
                 ),
                 modifier = Modifier.fillMaxWidth()
             ) {
-               Row(
+                Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
@@ -113,7 +147,7 @@ fun ConfigurationScreen(modifier: Modifier = Modifier, sharedViewModel: SharedVi
                         },
                         label = "Measurement Interval (ms)"
                     )
-               }
+                }
             }
 
         }
@@ -121,7 +155,7 @@ fun ConfigurationScreen(modifier: Modifier = Modifier, sharedViewModel: SharedVi
 }
 
 @Composable
-fun Stages(
+fun StagesEditor(
     modifier: Modifier = Modifier,
     stages: State<List<String>>,
     onStageAdded: (String) -> Unit,
@@ -181,6 +215,119 @@ fun Stages(
 }
 
 @Composable
+fun LocationsEditor(
+    modifier: Modifier = Modifier,
+    locations: State<List<MeasureLocation>>,
+    onLocationAdded: (MeasureLocation) -> Unit,
+    openLocation: (MeasureLocation) -> Unit,
+    onLocationDeleted: (Int) -> Unit
+) {
+    Column(modifier = modifier) {
+        Text("Locations", style = MaterialTheme.typography.headlineSmall)
+
+        locations.value.forEachIndexed { index, location ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(vertical = 8.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(location.description)
+
+                    Text(
+                        "lat: ${location.latitude}, long: ${location.longitude}",
+                        fontSize = 12.sp
+                    )
+                }
+
+                IconButton(onClick = { openLocation(location) }) {
+                    Icon(Icons.Default.Place, contentDescription = "Open in Map")
+                }
+
+                if (locations.value.lastIndex > 0) {
+                    IconButton(onClick = { onLocationDeleted(index) }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete Location")
+                    }
+                }
+            }
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(vertical = 8.dp)
+        ) {
+            val keyboardController = LocalSoftwareKeyboardController.current
+            var newDescription by remember { mutableStateOf("") }
+            var newLat by remember { mutableStateOf("") }
+            var newLong by remember { mutableStateOf("") }
+
+            Column(modifier = Modifier.weight(1f)) {
+
+                Row() {
+                    OutlinedTextField(
+                        value = newDescription,
+                        onValueChange = { newDescription = it },
+                        label = { Text("Enter location description") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Row() {
+                    OutlinedTextField(
+                        value = newLat,
+                        onValueChange = { newLat = it },
+                        label = { Text("Enter lat") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    OutlinedTextField(
+                        value = newLong,
+                        onValueChange = { newLong = it },
+                        label = { Text("Enter long") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                keyboardController?.hide()
+                                val lat = newLat.toDoubleOrNull() ?: return@KeyboardActions
+                                val long = newLong.toDoubleOrNull() ?: return@KeyboardActions
+                                onLocationAdded(MeasureLocation(newDescription, lat, long))
+                                newDescription = ""
+                                newLat = ""
+                                newLong = ""
+                            }
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            IconButton(onClick = {
+                val lat = newLat.toDoubleOrNull() ?: return@IconButton
+                val long = newLong.toDoubleOrNull() ?: return@IconButton
+                onLocationAdded(MeasureLocation(newDescription, lat, long))
+                newDescription = ""
+                newLat = ""
+                newLong = ""
+            }, modifier = Modifier.padding(start = 8.dp)) {
+                Icon(Icons.Default.Add, contentDescription = "Add Location")
+            }
+        }
+    }
+}
+
+@Composable
 fun LabeledIntegerField(
     value: Int,
     onValueChange: (Int) -> Unit,
@@ -201,7 +348,8 @@ fun LabeledIntegerField(
         OutlinedTextField(
             value = value.toString(),
             onValueChange = { newValue ->
-                val intValue = if (newValue.isEmpty()) 0 else newValue.toIntOrNull() ?: value // If parsing fails, keep previous value
+                val intValue = if (newValue.isEmpty()) 0 else newValue.toIntOrNull()
+                    ?: value // If parsing fails, keep previous value
                 onValueChange(intValue)
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),

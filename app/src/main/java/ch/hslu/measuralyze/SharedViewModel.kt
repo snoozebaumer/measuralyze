@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.Room
 import ch.hslu.measuralyze.model.Configuration
+import ch.hslu.measuralyze.model.MeasureLocation
 import ch.hslu.measuralyze.model.Measurement
 import ch.hslu.measuralyze.persistence.AppDatabase
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +32,8 @@ class SharedViewModel(context: Context) : ViewModel() {
 
     // Form data for configuration screen
     private val _stagesFormData: MutableState<List<String>> = mutableStateOf(emptyList())
+    private val _measureLocationsFormData: MutableState<List<MeasureLocation>> =
+        mutableStateOf(emptyList())
     val iterationsFormData: MutableState<Int> = mutableIntStateOf(20)
     val measurementIntervalInMsFormData: MutableState<Int> = mutableIntStateOf(1000)
 
@@ -39,20 +42,24 @@ class SharedViewModel(context: Context) : ViewModel() {
     // Expose immutable State for observation
     val measurementData: State<List<Measurement>> = _measurementData
     val stagesFormData: State<List<String>> = _stagesFormData
-    val config: Configuration = Configuration()
+    val measureLocationsFormData: State<List<MeasureLocation>> = _measureLocationsFormData
+    private val config: Configuration = Configuration()
 
     init {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 configurationDao.getConfiguration()?.let { configurationEntity ->
                     val stages = configurationEntity.stages
+                    val measureLocations = configurationEntity.measureLocations
                     val iterations = configurationEntity.iterations
                     val measurementIntervalInMs = configurationEntity.measurementIntervalInMs
                     withContext(Dispatchers.Main) {
                         config.stages = stages
+                        config.measureLocations = measureLocations
                         config.iterations = iterations
                         config.measurementIntervalInMs = measurementIntervalInMs
                         _stagesFormData.value = stages
+                        _measureLocationsFormData.value = measureLocations
                         iterationsFormData.value = iterations
                         measurementIntervalInMsFormData.value = measurementIntervalInMs
                     }
@@ -78,11 +85,19 @@ class SharedViewModel(context: Context) : ViewModel() {
             return
         }
 
-        if(config.stages.isNotEmpty()) {
+        if (config.stages.isNotEmpty()) {
             _stagesFormData.value = config.stages
         } else {
             _stagesFormData.value = mutableListOf("Standard settings")
         }
+
+        if (config.measureLocations.isNotEmpty()) {
+            _measureLocationsFormData.value = config.measureLocations
+        } else {
+            _measureLocationsFormData.value =
+                mutableListOf(MeasureLocation("Standard location", 0.0, 0.0))
+        }
+
         iterationsFormData.value = config.iterations
         measurementIntervalInMsFormData.value = config.measurementIntervalInMs
     }
@@ -91,6 +106,7 @@ class SharedViewModel(context: Context) : ViewModel() {
         config.stages = _stagesFormData.value
         config.iterations = iterationsFormData.value
         config.measurementIntervalInMs = measurementIntervalInMsFormData.value
+        config.measureLocations = _measureLocationsFormData.value
         viewModelScope.launch {
             configurationDao.insertOrUpdateConfiguration(config)
         }
@@ -105,8 +121,17 @@ class SharedViewModel(context: Context) : ViewModel() {
         _stagesFormData.value = _stagesFormData.value.toMutableList().apply { removeAt(index) }
     }
 
+    fun addLocation(location: MeasureLocation) {
+        _measureLocationsFormData.value += location
+    }
+
+    fun removeLocation(index: Int) {
+        _measureLocationsFormData.value =
+            _measureLocationsFormData.value.toMutableList().apply { removeAt(index) }
+    }
+
     fun hasUnsavedConfigChanges(): Boolean {
-        return config.stages != _stagesFormData.value || config.iterations != iterationsFormData.value || config.measurementIntervalInMs != measurementIntervalInMsFormData.value
+        return config.stages != _stagesFormData.value || config.iterations != iterationsFormData.value || config.measurementIntervalInMs != measurementIntervalInMsFormData.value || config.measureLocations != _measureLocationsFormData.value
     }
 
 }
