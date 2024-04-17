@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
                             },
                             actions = {
                                 if (!settingsActive) {
-                                    IconButton(onClick = { settingsActive = true }) {
+                                    IconButton(onClick = { settingsActive = true }, enabled = !sharedViewModel.measuring.value) {
                                         Icon(
                                             imageVector = Icons.Filled.Settings,
                                             contentDescription = "Configuration"

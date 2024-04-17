@@ -71,6 +71,7 @@ fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewMode
                     if (measurementCount == totalIterations) {
                         buttonText = "Start measurement"
                         buttonColor = Color.LightGray
+                        sharedViewModel.measuring.value = false
                         val nextStageIndex = (currentStageIndex + 1) % stages.size
                         sharedViewModel.currentMeasureStage.intValue = nextStageIndex
                     } else {
@@ -86,6 +87,7 @@ fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewMode
         // Start fetching measurements
         buttonText = "Measuring 0/${totalIterations}"
         buttonColor = Color(0xFFADD8E6)
+        sharedViewModel.measuring.value = true
         fetchNextMeasurement()
     }
 

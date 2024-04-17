@@ -52,13 +52,7 @@ class SharedViewModel(context: Context) : ViewModel() {
     val currentMeasureLocation: MutableState<MeasureLocation> = mutableStateOf(
         MeasureLocation(standardLocationName, 0.0, 0.0)
     )
-
-
-    // Expose immutable State for observation
-    val measurementData: State<List<Measurement>> = _measurementData
-    val stagesFormData: State<List<String>> = _stagesFormData
-    val measureLocationsFormData: State<List<MeasureLocation>> = _measureLocationsFormData
-    val config: Configuration = Configuration()
+    val measuring: MutableState<Boolean> = mutableStateOf(false)
 
     init {
         viewModelScope.launch {
