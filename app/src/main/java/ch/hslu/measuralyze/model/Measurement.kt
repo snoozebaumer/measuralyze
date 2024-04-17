@@ -9,6 +9,7 @@ data class Measurement(
     val id: Long = 0,
     var timeStamp: java.time.LocalDateTime,
     var stage: String = "",
+    var measureLocation: MeasureLocation = MeasureLocation("Standard location", 0.0, 0.0),
     var gpsPosition: GpsPosition = GpsPosition(0.0,0.0,0f),
     var cellTowerInfo: List<CellTowerInfo> = mutableListOf(),
     var wifiInfo: List<WifiInfo> = mutableListOf(),

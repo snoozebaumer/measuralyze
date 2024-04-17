@@ -20,6 +20,9 @@ import kotlinx.coroutines.withContext
  * SharedViewModel to share configuration and app state between different screens.
  */
 class SharedViewModel(context: Context) : ViewModel() {
+    private val standardLocationName: String = "Standard location"
+    private val standardStageName: String = "Standard settings"
+
     private val database: AppDatabase = Room.databaseBuilder(
         context.applicationContext,
         AppDatabase::class.java, "app-database"
@@ -37,9 +40,19 @@ class SharedViewModel(context: Context) : ViewModel() {
     val iterationsFormData: MutableState<Int> = mutableIntStateOf(20)
     val measurementIntervalInMsFormData: MutableState<Int> = mutableIntStateOf(1000)
 
+    // Expose immutable State for observation
+    val measurementData: State<List<Measurement>> = _measurementData
+    val stagesFormData: State<List<String>> = _stagesFormData
+    val measureLocationsFormData: State<List<MeasureLocation>> = _measureLocationsFormData
+    val config: Configuration = Configuration()
+
     var configFormDirty: Boolean = false
 
     val currentMeasureStage = mutableIntStateOf(0)
+    val currentMeasureLocation: MutableState<MeasureLocation> = mutableStateOf(
+        MeasureLocation(standardLocationName, 0.0, 0.0)
+    )
+
 
     // Expose immutable State for observation
     val measurementData: State<List<Measurement>> = _measurementData
@@ -62,6 +75,7 @@ class SharedViewModel(context: Context) : ViewModel() {
                         config.measurementIntervalInMs = measurementIntervalInMs
                         _stagesFormData.value = stages
                         _measureLocationsFormData.value = measureLocations
+                        currentMeasureLocation.value = measureLocations.first()
                         iterationsFormData.value = iterations
                         measurementIntervalInMsFormData.value = measurementIntervalInMs
                     }
@@ -72,7 +86,14 @@ class SharedViewModel(context: Context) : ViewModel() {
         if (config.stages.isNotEmpty()) {
             _stagesFormData.value = config.stages
         } else {
-            _stagesFormData.value = mutableListOf("Standard settings")
+            _stagesFormData.value = mutableListOf(standardStageName)
+        }
+
+        if (config.measureLocations.isNotEmpty()) {
+            _measureLocationsFormData.value = config.measureLocations
+        } else {
+            _measureLocationsFormData.value =
+                mutableListOf(MeasureLocation(standardLocationName, 0.0, 0.0))
         }
 
         viewModelScope.launch {
@@ -97,14 +118,14 @@ class SharedViewModel(context: Context) : ViewModel() {
         if (config.stages.isNotEmpty()) {
             _stagesFormData.value = config.stages
         } else {
-            _stagesFormData.value = mutableListOf("Standard settings")
+            _stagesFormData.value = mutableListOf(standardStageName)
         }
 
         if (config.measureLocations.isNotEmpty()) {
             _measureLocationsFormData.value = config.measureLocations
         } else {
             _measureLocationsFormData.value =
-                mutableListOf(MeasureLocation("Standard location", 0.0, 0.0))
+                mutableListOf(MeasureLocation(standardLocationName, 0.0, 0.0))
         }
 
         iterationsFormData.value = config.iterations
@@ -120,6 +141,10 @@ class SharedViewModel(context: Context) : ViewModel() {
         // if a user deletes a stage while they are measuring, reset current stage to 0 to make sure it is still valid, else the application will crash
         if (currentMeasureStage.intValue >= config.stages.size) {
             currentMeasureStage.intValue = 0
+        }
+
+        if (currentMeasureLocation.value !in config.measureLocations) {
+            currentMeasureLocation.value = config.measureLocations.first()
         }
 
         viewModelScope.launch {

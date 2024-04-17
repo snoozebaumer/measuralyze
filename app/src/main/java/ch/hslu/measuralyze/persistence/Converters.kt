@@ -74,6 +74,18 @@ object Converters {
 
     @TypeConverter
     @JvmStatic
+    fun fromMeasureLocation(value: MeasureLocation?): String {
+        return Gson().toJson(value)
+    }
+
+    @TypeConverter
+    @JvmStatic
+    fun toMeasureLocation(value: String): MeasureLocation {
+        return Gson().fromJson(value, MeasureLocation::class.java)
+    }
+
+    @TypeConverter
+    @JvmStatic
     fun fromMeasureLocationList(value: List<MeasureLocation>?): String {
         return Gson().toJson(value)
     }

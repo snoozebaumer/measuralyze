@@ -10,12 +10,21 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ch.hslu.measuralyze.SharedViewModel
 import ch.hslu.measuralyze.component.measure.MeasureButton
+import ch.hslu.measuralyze.model.MeasureLocation
 import ch.hslu.measuralyze.service.MeasureService
 import java.time.format.DateTimeFormatter
 
@@ -54,6 +64,7 @@ fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewMode
             if (measurementCount < totalIterations) {
                 measureService.fetchMeasurement { measurement ->
                     measurement.stage = stages[currentStageIndex]
+                    measurement.measureLocation = sharedViewModel.currentMeasureLocation.value
                     sharedViewModel.addMeasurement(measurement)
                     measurementCount++
                     buttonText = "Measuring ${measurementCount}/${totalIterations}"
@@ -89,70 +100,135 @@ fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewMode
             }
         }
 
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceEvenly
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "Stage: " + if (sharedViewModel.stagesFormData.value.isNotEmpty()) sharedViewModel.stagesFormData.value[sharedViewModel.currentMeasureStage.intValue] else "Measure",
-                modifier = Modifier.padding(bottom = 16.dp),
-                style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            )
-
-            MeasureButton(text = buttonText, color = buttonColor) {
-                buttonText = "Measuring"
-                buttonColor = Color(0xFFADD8E6)
-
-                if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                    makeMeasurementsForCurrentStage()
-                } else {
-                    requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+    Column(modifier = modifier.fillMaxSize()) {
+        Row(
+            horizontalArrangement = Arrangement.Absolute.Right,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Spacer(modifier = Modifier.weight(1f))
+            Column(modifier = Modifier.weight(1.5f), horizontalAlignment = Alignment.End) {
+                LocationDropDown(
+                    sharedViewModel.measureLocationsFormData,
+                    sharedViewModel.currentMeasureLocation
+                ) {
+                    sharedViewModel.currentMeasureLocation.value = it
                 }
             }
         }
-
         Column(
-            horizontalAlignment = Alignment.Start,
-            modifier = Modifier
-                .verticalScroll(rememberScrollState())
-                .horizontalScroll(
-                    rememberScrollState()
-                )
-                .weight(weight = 1f, fill = false)
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceEvenly
         ) {
-            if (measurementList.isNotEmpty()) {
-                //TODO: outsource to different view where measurementList is passed in, with Table: https://github.com/sunny-chung/composable-table
-                for (measurement in measurementList) {
-                    if (measurement.gpsPosition.longitude != 0.toDouble()) {
-                        val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-                        Text(
-                            text = "${measurement.id}: GPS Position: ${measurement.gpsPosition}\nDate/Time: ${
-                                measurement.timeStamp.format(
-                                    dateFormat
-                                )
-                            }",
-                            modifier = Modifier.padding(top = 16.dp),
-                        )
-                    }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Stage: " + if (sharedViewModel.stagesFormData.value.isNotEmpty()) sharedViewModel.stagesFormData.value[sharedViewModel.currentMeasureStage.intValue] else "Measure",
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                )
 
-                    for (cellTower in measurement.cellTowerInfo) {
-                        Text(
-                            text = "ECI: ${cellTower.cid}\nLAC: ${cellTower.lac}\nSignal: ${cellTower.rsrp}",
-                            modifier = Modifier.padding(top = 16.dp),
-                        )
-                    }
+                MeasureButton(text = buttonText, color = buttonColor) {
+                    buttonText = "Measuring"
+                    buttonColor = Color(0xFFADD8E6)
 
-                    for (wifiInfo in measurement.wifiInfo) {
+                    if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                        makeMeasurementsForCurrentStage()
+                    } else {
+                        requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                    }
+                }
+            }
+
+            Column(
+                horizontalAlignment = Alignment.Start,
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .horizontalScroll(
+                        rememberScrollState()
+                    )
+                    .weight(weight = 1f, fill = false)
+            ) {
+                if (measurementList.isNotEmpty()) {
+                    //TODO: outsource to different view where measurementList is passed in, with Table: https://github.com/sunny-chung/composable-table
+                    for (measurement in measurementList) {
+                        if (measurement.gpsPosition.longitude != 0.toDouble()) {
+                            val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                            Text(
+                                text = "${measurement.id}: GPS Position: ${measurement.gpsPosition}\nDate/Time: ${
+                                    measurement.timeStamp.format(
+                                        dateFormat
+                                    )
+                                }",
+                                modifier = Modifier.padding(top = 16.dp),
+                            )
+                        }
+
+                        for (cellTower in measurement.cellTowerInfo) {
+                            Text(
+                                text = "ECI: ${cellTower.cid}\nLAC: ${cellTower.lac}\nSignal: ${cellTower.rsrp}",
+                                modifier = Modifier.padding(top = 16.dp),
+                            )
+                        }
+
+                        for (wifiInfo in measurement.wifiInfo) {
+                            Text(
+                                text = "SSID: ${wifiInfo.ssid}\nBSSID: ${wifiInfo.bssid}\nSignal strength: ${wifiInfo.rssi}",
+                                modifier = Modifier.padding(top = 16.dp)
+                            )
+                        }
                         Text(
-                            text = "SSID: ${wifiInfo.ssid}\nBSSID: ${wifiInfo.bssid}\nSignal strength: ${wifiInfo.rssi}",
+                            text = "System settings: ${measurement.systemSettings}",
                             modifier = Modifier.padding(top = 16.dp)
                         )
                     }
-                    Text(
-                        text = "System settings: ${measurement.systemSettings}",
-                        modifier = Modifier.padding(top = 16.dp)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LocationDropDown(
+    locations: State<List<MeasureLocation>>,
+    selectedLocation: State<MeasureLocation>,
+    onLocationSelected: (MeasureLocation) -> Unit
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        ExposedDropdownMenuBox(
+            expanded = isExpanded,
+            onExpandedChange = { isExpanded = !isExpanded }) {
+            TextField(
+                modifier = Modifier.menuAnchor(),
+                value = selectedLocation.value.description,
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(
+                        expanded = isExpanded
+                    )
+                })
+
+            ExposedDropdownMenu(expanded = isExpanded, onDismissRequest = { isExpanded = false }) {
+                locations.value.forEach { measureLocation ->
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(text = measureLocation.description)
+                                Text(text = "(${measureLocation.latitude}, ${measureLocation.longitude})", style = TextStyle(fontSize = 12.sp))
+                            }
+                        },
+                        onClick = {
+                            onLocationSelected(measureLocation)
+                            isExpanded = false
+                        },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                     )
                 }
             }
