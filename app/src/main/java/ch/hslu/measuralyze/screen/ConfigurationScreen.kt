@@ -151,6 +151,7 @@ fun ConfigurationScreen(modifier: Modifier = Modifier, sharedViewModel: SharedVi
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(16.dp))
 
         }
     }
@@ -188,27 +189,32 @@ fun StagesEditor(
             val keyboardController = LocalSoftwareKeyboardController.current
             var newStage by remember { mutableStateOf("") }
 
-            OutlinedTextField(
-                value = newStage,
-                onValueChange = { newStage = it },
-                label = { Text("Enter stage") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        keyboardController?.hide()
-                        onStageAdded(newStage)
-                        newStage = ""
-                    }
-                ),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = colorScheme.surface,
-                    unfocusedContainerColor = colorScheme.surface,
-                    disabledContainerColor = colorScheme.surface
-                )
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Row() {
+                    OutlinedTextField(
+                        value = newStage,
+                        onValueChange = { newStage = it },
+                        label = { Text("Enter stage") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                keyboardController?.hide()
+                                onStageAdded(newStage)
+                                newStage = ""
+                            }
+                        ),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = colorScheme.surface,
+                            unfocusedContainerColor = colorScheme.surface,
+                            disabledContainerColor = colorScheme.surface
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
 
             IconButton(onClick = {
                 onStageAdded(newStage)
