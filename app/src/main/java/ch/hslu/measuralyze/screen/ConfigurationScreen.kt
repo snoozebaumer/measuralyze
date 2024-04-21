@@ -67,12 +67,11 @@ fun ConfigurationScreen(modifier: Modifier = Modifier, sharedViewModel: SharedVi
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(top = 16.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(top = 16.dp)) {
             Card(
                 elevation = CardDefaults.cardElevation(
                     defaultElevation = 4.dp
