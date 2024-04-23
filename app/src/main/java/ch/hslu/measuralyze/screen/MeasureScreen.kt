@@ -217,7 +217,11 @@ fun LocationDropDown(
             onExpandedChange = { isExpanded = !isExpanded }) {
             TextField(
                 modifier = Modifier.menuAnchor(),
-                value = selectedLocation.value.description,
+                value = if (selectedLocation.value.description.length > 13) {
+                    "${selectedLocation.value.description.take(11)}..."
+                } else {
+                    selectedLocation.value.description
+                },
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = {
