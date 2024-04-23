@@ -27,4 +27,14 @@ class WifiInfo {
     override fun toString(): String {
         return "WifiInfo(ssid='$ssid', bssid='$bssid', rssi=$rssi, frequency=$frequency)"
     }
+
+    companion object {
+        fun getCsvHeader(numberInWifiList: Int): String {
+            return "wifiSsid$numberInWifiList\twifiBssid$numberInWifiList\twifiRssi$numberInWifiList\twifiFrequency$numberInWifiList"
+        }
+    }
+
+    fun toCsvString(): String {
+        return "$ssid\t$bssid\t$rssi\t$frequency"
+    }
 }

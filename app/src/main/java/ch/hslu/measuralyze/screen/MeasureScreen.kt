@@ -7,7 +7,6 @@ import android.os.Looper
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,13 +14,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
@@ -35,13 +38,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ch.hslu.measuralyze.SharedViewModel
 import ch.hslu.measuralyze.component.measure.MeasureButton
 import ch.hslu.measuralyze.model.MeasureLocation
 import ch.hslu.measuralyze.service.MeasureService
-import java.time.format.DateTimeFormatter
 
 @Composable
 fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewModel) {
@@ -49,6 +52,7 @@ fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewMode
     var buttonText by remember { mutableStateOf("Start measurement") }
     var buttonColor by remember { mutableStateOf(Color.LightGray) }
     val measurementList = sharedViewModel.measurementData.value
+    val openDialog = remember { mutableStateOf(false) }
 
     val measureService = MeasureService(context)
 
@@ -141,51 +145,56 @@ fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewMode
                 }
             }
 
-            Column(
-                horizontalAlignment = Alignment.Start,
-                modifier = Modifier
-                    .verticalScroll(rememberScrollState())
-                    .horizontalScroll(
-                        rememberScrollState()
-                    )
-                    .weight(weight = 1f, fill = false)
-            ) {
-                if (measurementList.isNotEmpty()) {
-                    //TODO: outsource to different view where measurementList is passed in, with Table: https://github.com/sunny-chung/composable-table
-                    for (measurement in measurementList) {
-                        if (measurement.gpsPosition.longitude != 0.toDouble()) {
-                            val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-                            Text(
-                                text = "${measurement.id}: GPS Position: ${measurement.gpsPosition}\nDate/Time: ${
-                                    measurement.timeStamp.format(
-                                        dateFormat
-                                    )
-                                }",
-                                modifier = Modifier.padding(top = 16.dp),
-                            )
-                        }
-
-                        for (cellTower in measurement.cellTowerInfo) {
-                            Text(
-                                text = "ECI: ${cellTower.cid}\nLAC: ${cellTower.lac}\nSignal: ${cellTower.rsrp}",
-                                modifier = Modifier.padding(top = 16.dp),
-                            )
-                        }
-
-                        for (wifiInfo in measurement.wifiInfo) {
-                            Text(
-                                text = "SSID: ${wifiInfo.ssid}\nBSSID: ${wifiInfo.bssid}\nSignal strength: ${wifiInfo.rssi}",
-                                modifier = Modifier.padding(top = 16.dp)
-                            )
-                        }
-                        Text(
-                            text = "System settings: ${measurement.systemSettings}",
-                            modifier = Modifier.padding(top = 16.dp)
-                        )
+            Column {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    modifier = Modifier.padding(top = 16.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            val file = sharedViewModel.createCSVFile(context, measurementList)
+                            sharedViewModel.shareCSV(context, file)
+                        },
+                        enabled = measurementList.isNotEmpty() && sharedViewModel.measuring.value.not(),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(text = "Export measurements", textAlign = TextAlign.Center)
                     }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Button(
+                        onClick = { openDialog.value = true },
+                        modifier = Modifier.weight(1f),
+                        enabled = measurementList.isNotEmpty() && sharedViewModel.measuring.value.not(),
+                        colors =
+                        ButtonColors(
+                            containerColor = Color.Red.copy(alpha = 0.7f),
+                            disabledContainerColor = Color.Red.copy(alpha = 0.5f),
+                            contentColor = Color.White,
+                            disabledContentColor = Color.Black.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Text(text = "Delete measurements", textAlign = TextAlign.Center)
+                    }
+                }
+                Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Total unique measurements: ${measurementList.size}", modifier = Modifier.padding(top = 16.dp))
                 }
             }
         }
+    }
+
+    if (openDialog.value) {
+        DeleteConfirmationAlert(
+            onDismissRequest = {
+                openDialog.value = false
+            },
+            onConfirmation = {
+                sharedViewModel.deleteAllMeasurements()
+                openDialog.value = false
+            },
+            dialogTitle = "Delete Measurements",
+            dialogText = "Are you sure you want to delete all measurements?"
+        )
     }
 }
 
@@ -223,7 +232,10 @@ fun LocationDropDown(
                         text = {
                             Column {
                                 Text(text = measureLocation.description)
-                                Text(text = "(${measureLocation.latitude}, ${measureLocation.longitude})", style = TextStyle(fontSize = 12.sp))
+                                Text(
+                                    text = "(${measureLocation.latitude}, ${measureLocation.longitude})",
+                                    style = TextStyle(fontSize = 12.sp)
+                                )
                             }
                         },
                         onClick = {
@@ -232,8 +244,49 @@ fun LocationDropDown(
                         },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                     )
+                    if (measureLocation != locations.value.last()) {
+                        HorizontalDivider()
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+fun DeleteConfirmationAlert(
+    onDismissRequest: () -> Unit,
+    onConfirmation: () -> Unit,
+    dialogTitle: String,
+    dialogText: String
+) {
+    AlertDialog(
+        title = {
+            Text(text = dialogTitle)
+        },
+        text = {
+            Text(text = dialogText)
+        },
+        onDismissRequest = {
+            onDismissRequest()
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirmation()
+                }
+            ) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    onDismissRequest()
+                }
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
 }

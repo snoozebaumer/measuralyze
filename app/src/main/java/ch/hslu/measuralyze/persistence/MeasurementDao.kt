@@ -13,4 +13,7 @@ interface MeasurementDao {
 
     @Insert
     suspend fun insertMeasurement(measurement: Measurement)
+
+    @Query("DELETE FROM measurements")
+    fun deleteAllMeasurements()
 }

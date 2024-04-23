@@ -1,20 +1,28 @@
 package ch.hslu.measuralyze
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.Room
+import ch.hslu.measuralyze.model.CellTowerInfo
 import ch.hslu.measuralyze.model.Configuration
 import ch.hslu.measuralyze.model.MeasureLocation
 import ch.hslu.measuralyze.model.Measurement
+import ch.hslu.measuralyze.model.WifiInfo
 import ch.hslu.measuralyze.persistence.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileWriter
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 /**
  * SharedViewModel to share configuration and app state between different screens.
@@ -166,6 +174,105 @@ class SharedViewModel(context: Context) : ViewModel() {
 
     fun hasUnsavedConfigChanges(): Boolean {
         return config.stages != _stagesFormData.value || config.iterations != iterationsFormData.value || config.measurementIntervalInMs != measurementIntervalInMsFormData.value || config.measureLocations != _measureLocationsFormData.value
+    }
+
+    fun createCSVFile(context: Context, measurements: List<Measurement>): File {
+        val dateFormat = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss") // 20240418_120102
+        val file =
+            File(context.cacheDir, "measurements_${LocalDateTime.now().format(dateFormat)}.csv")
+
+        // check the max amount of cell towers in any measurement
+        val maxCellTowers = measurements.maxOf { it.cellTowerInfo.size }
+
+        // check the max amount of found wifi access points in any measurement
+        val maxWifi = measurements.maxOf { it.wifiInfo.size }
+
+        val writer = FileWriter(file)
+
+        writer.append(getCSVHeader(maxCellTowers, maxWifi))
+
+        writer.append(getCSVContent(measurements, maxCellTowers, maxWifi))
+
+        writer.flush()
+        writer.close()
+
+        return file
+    }
+
+    fun shareCSV(context: Context, file: File) {
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+        val intent = Intent(Intent.ACTION_SEND)
+        intent.type = "text/csv"
+        intent.putExtra(Intent.EXTRA_SUBJECT, "CSV File")
+        intent.putExtra(Intent.EXTRA_STREAM, uri)
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        context.startActivity(Intent.createChooser(intent, "Share CSV"))
+    }
+
+    fun deleteAllMeasurements() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                measurementDao.deleteAllMeasurements()
+            }
+            _measurementData.value = emptyList()
+        }
+    }
+
+    /**
+     * create the header for the csv file, containing all attributes of a measurement
+     */
+    private fun getCSVHeader(maxCellTowers: Int, maxWifi: Int): String {
+        // create header for every single attribute, separated by a comma, mark the cell tower and wifi attributes with a number to indicate the amount of cell towers and wifi
+        return "timestamp\tstage\tmeasureLocation\tactualLatitude\tactualLongitude\tgpsLatitude\tgpsLongitude\tgpsAccuracy\t${
+            (1..maxCellTowers).joinToString(
+                "\t"
+            ) { CellTowerInfo.getCsvHeader(it) }
+        }" + "\t" + "${(1..maxWifi).joinToString("\t") { WifiInfo.getCsvHeader(it) }}\twifiScanning\tbluetoothScanning\tairplaneMode\twifiEnabled\tbluetoothEnabled\tsimPresent\n"
+    }
+
+    /**
+     * compile all measurements into a single string, separated by a tab, each measurement separated by a newline
+     */
+    private fun getCSVContent(measurements: List<Measurement>, maxCellTowers: Int, maxWifi: Int): String {
+        val str: StringBuilder = StringBuilder()
+        measurements.forEach { measurement ->
+            str.append("${measurement.timeStamp}\t${measurement.stage}\t${measurement.measureLocation.description}\t${measurement.measureLocation.latitude}\t${measurement.measureLocation.longitude}\t${measurement.gpsPosition.latitude}\t${measurement.gpsPosition.longitude}\t${measurement.gpsPosition.accuracy}\t")
+
+            str.append(getCellTowerInfoCSV(measurement, maxCellTowers))
+
+            str.append(getWifiInfoCSV(measurement, maxWifi))
+
+            str.append("${measurement.systemSettings.isWifiScanningEnabled}\t${measurement.systemSettings.isBluetoothScanningEnabled}\t${measurement.systemSettings.isAirplaneModeEnabled}\t${measurement.systemSettings.isWifiEnabled}\t${measurement.systemSettings.isBluetoothEnabled}\t${measurement.systemSettings.isSimPresent}\n")
+        }
+        return str.toString()
+    }
+
+    /**
+     * create a string with all cell tower information for current measurement, seperated by tab. if there are less cell towers than the max amount, fill the remaining columns with empty strings
+     */
+    private fun getCellTowerInfoCSV(measurement: Measurement, maxCellTowers: Int): String {
+        return (1..maxCellTowers).joinToString("\t") {
+            if (it <= measurement.cellTowerInfo.size) {
+                val cellTowerInfo = measurement.cellTowerInfo[it - 1]
+                cellTowerInfo.toCsvString()
+            } else {
+                "\t\t\t\t\t\t"
+            }
+        } + "\t"
+    }
+
+    /**
+     * create a string with all wifi information for current measurement, seperated by tab. if there are less wifi than the max amount, fill the remaining columns with empty strings
+     */
+    private fun getWifiInfoCSV(measurement: Measurement, maxWifi: Int): String {
+        return (1..maxWifi).joinToString("\t") {
+            if (it <= measurement.wifiInfo.size) {
+                val wifiInfo = measurement.wifiInfo[it - 1]
+                wifiInfo.toCsvString()
+            } else {
+                "\t\t\t"
+            }
+        } + "\t"
     }
 
 }

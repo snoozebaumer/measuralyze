@@ -43,4 +43,14 @@ class CellTowerInfo {
     override fun toString(): String {
         return "CellTowerInfo(mcc='$mcc', mnc='$mnc', lac=$lac, cid=$cid, operator='$operator', rsrp=$rsrp, rsrq=$rsrq)"
     }
+
+    companion object {
+        fun getCsvHeader(numberInCellTowerList: Int): String {
+            return "cellTowerMcc$numberInCellTowerList\tcellTowerMnc$numberInCellTowerList\tcellTowerLac$numberInCellTowerList\tcellTowerCid$numberInCellTowerList\tcellTowerOperator$numberInCellTowerList\tcellTowerRsrp$numberInCellTowerList\tcellTowerRsrq$numberInCellTowerList"
+        }
+    }
+
+    fun toCsvString(): String {
+        return "$mcc\t$mnc\t$lac\t$cid\t$operator\t$rsrp\t$rsrq"
+    }
 }
