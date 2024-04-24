@@ -146,7 +146,7 @@ fun ConfigurationScreen(modifier: Modifier = Modifier, sharedViewModel: SharedVi
                             sharedViewModel.measurementIntervalInMsFormData.value = it
                             sharedViewModel.configFormDirty = true
                         },
-                        label = "Measurement Interval (ms)"
+                        label = "Minimum Measurement Interval (ms)"
                     )
                 }
             }
@@ -366,7 +366,7 @@ fun LabeledIntegerField(
     ) {
         Text(
             text = label,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )

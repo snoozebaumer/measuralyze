@@ -115,7 +115,8 @@ fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewMode
             Column(modifier = Modifier.weight(1.5f), horizontalAlignment = Alignment.End) {
                 LocationDropDown(
                     sharedViewModel.measureLocationsFormData,
-                    sharedViewModel.currentMeasureLocation
+                    sharedViewModel.currentMeasureLocation,
+                    sharedViewModel.measuring.value.not()
                 ) {
                     sharedViewModel.currentMeasureLocation.value = it
                 }
@@ -133,7 +134,7 @@ fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewMode
                     style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 )
 
-                MeasureButton(text = buttonText, color = buttonColor) {
+                MeasureButton(text = buttonText, color = buttonColor, sharedViewModel.measuring.value.not()) {
                     buttonText = "Measuring"
                     buttonColor = Color(0xFFADD8E6)
 
@@ -203,6 +204,7 @@ fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewMode
 fun LocationDropDown(
     locations: State<List<MeasureLocation>>,
     selectedLocation: State<MeasureLocation>,
+    enabled: Boolean = true,
     onLocationSelected: (MeasureLocation) -> Unit
 ) {
     var isExpanded by remember { mutableStateOf(false) }
@@ -214,7 +216,7 @@ fun LocationDropDown(
     ) {
         ExposedDropdownMenuBox(
             expanded = isExpanded,
-            onExpandedChange = { isExpanded = !isExpanded }) {
+            onExpandedChange = { if (enabled) {isExpanded = !isExpanded} }) {
             TextField(
                 modifier = Modifier.menuAnchor(),
                 value = if (selectedLocation.value.description.length > 13) {
@@ -225,9 +227,11 @@ fun LocationDropDown(
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(
-                        expanded = isExpanded
-                    )
+                    if (enabled) {
+                        ExposedDropdownMenuDefaults.TrailingIcon(
+                            expanded = isExpanded
+                        )
+                    }
                 })
 
             ExposedDropdownMenu(expanded = isExpanded, onDismissRequest = { isExpanded = false }) {

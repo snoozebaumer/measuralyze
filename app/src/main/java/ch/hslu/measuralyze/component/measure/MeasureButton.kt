@@ -16,13 +16,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun MeasureButton(text: String, color: Color, onClick: () -> Unit) {
+fun MeasureButton(text: String, color: Color, enabled: Boolean = true, onClick: () -> Unit) {
     Surface(
         color = color,
         shape = CircleShape,
         modifier = Modifier
             .size(250.dp)
-            .clickable { onClick() }
+            .clickable { if (enabled) {onClick()} }
     ) {
         Column (verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally) {
