@@ -2,6 +2,7 @@ package ch.hslu.measuralyze
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
@@ -61,8 +62,6 @@ class MainActivity : ComponentActivity() {
                                             contentDescription = "Back to measure screen"
                                         )
                                     }
-                                } else {
-                                    null
                                 }
                             },
                             colors = TopAppBarDefaults.topAppBarColors(
@@ -138,9 +137,25 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+            fun createOnBackPressedCallback(): OnBackPressedCallback {
+                return object : OnBackPressedCallback(true) {
+                    override fun handleOnBackPressed() {
+
+                        if (settingsActive) {
+                            if (sharedViewModel.hasUnsavedConfigChanges()) {
+                                openDialog.value = true
+                            } else {
+                                settingsActive = false
+                            }
+                        } else {
+                            finish()
+                        }
+                    }
+                }
+            }
+            onBackPressedDispatcher.addCallback(createOnBackPressedCallback())
         }
     }
-
 }
 
 @Composable
