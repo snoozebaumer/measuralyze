@@ -4,7 +4,9 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
+import android.view.WindowManager
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +56,8 @@ fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewMode
     var buttonColor by remember { mutableStateOf(Color.LightGray) }
     val measurementList = sharedViewModel.measurementData.value
     val openDialog = remember { mutableStateOf(false) }
+    val activity = (context as? ComponentActivity)
+    val window = activity?.window
 
     val measureService = MeasureService(context)
 
@@ -106,6 +111,16 @@ fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewMode
             }
         }
 
+    DisposableEffect(key1 = activity) {
+        // Set FLAG_KEEP_SCREEN_ON when the composable is first composed
+        window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        // Remove FLAG_KEEP_SCREEN_ON when the composable is disposed
+        onDispose {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
         Row(
             horizontalArrangement = Arrangement.Absolute.Right,
@@ -134,7 +149,11 @@ fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewMode
                     style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 )
 
-                MeasureButton(text = buttonText, color = buttonColor, sharedViewModel.measuring.value.not()) {
+                MeasureButton(
+                    text = buttonText,
+                    color = buttonColor,
+                    sharedViewModel.measuring.value.not()
+                ) {
                     buttonText = "Measuring"
                     buttonColor = Color(0xFFADD8E6)
 
@@ -177,8 +196,14 @@ fun MeasureScreen(modifier: Modifier = Modifier, sharedViewModel: SharedViewMode
                         Text(text = "Delete measurements", textAlign = TextAlign.Center)
                     }
                 }
-                Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Total unique measurements: ${measurementList.size}", modifier = Modifier.padding(top = 16.dp))
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "Total unique measurements: ${measurementList.size}",
+                        modifier = Modifier.padding(top = 16.dp)
+                    )
                 }
             }
         }
@@ -216,7 +241,11 @@ fun LocationDropDown(
     ) {
         ExposedDropdownMenuBox(
             expanded = isExpanded,
-            onExpandedChange = { if (enabled) {isExpanded = !isExpanded} }) {
+            onExpandedChange = {
+                if (enabled) {
+                    isExpanded = !isExpanded
+                }
+            }) {
             TextField(
                 modifier = Modifier.menuAnchor(),
                 value = if (selectedLocation.value.description.length > 13) {
