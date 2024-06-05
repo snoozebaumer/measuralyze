@@ -47,7 +47,7 @@ To ensure that the settings previously defined by the person taking the measurem
 
 ## Risks and technical debt
 ### Limitations
-Google seems to increasingly want to restrict access to certain system settings: There is no way to programmatically check whether the “Google Location Accuracy” setting is enabled or disabled. Existing ways to read the “Wi-Fi Scanning” setting have been marked as deprecated without replacement.[^1] In the absence of an alternative, the obsolete functions are still used, but may not work as desired with a new Android version.
+Google seems to increasingly want to restrict access to certain system settings: There is no way to programmatically check whether the “Google Location Accuracy” setting is enabled or disabled. Existing ways to read the “Wi-Fi Scanning” setting have been marked as deprecated without replacement[^1]. In the absence of an alternative, the obsolete functions are still used, but may not work as desired with a new Android version.
 
 ### Technical Debt
 This app was developed with very little experience in Android development, as well as time constraints. 
